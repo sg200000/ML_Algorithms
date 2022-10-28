@@ -5,50 +5,73 @@
 #include <math.h>
 
 #define N   100
-#define K   5
+#define K   10
 #define D   3
 
 void generateRandomData(void);
+void initParameters(void);
 void serialEM_GMM(void);
-float G(float * x, float * mu, float theta[][D]);
-void diagMatrixInverse(float matrix[][D], float matrixInversed[][D]);
+float G(int n, int k);
+void diagMatrixInverse(int k, float matrixInversed[][D]);
 float diagMatrixBy2VectorsMultiply(float matrix[][D], float * vector1, float * vector2);
-float det(float matrix[][D]);
+float det(int k);
 void getComponent(int k);
 
-float x[N][D], w[K], mu[K][D] = {0}, theta[K][D][D] = {0};
+float x[N][D], w[K], mu[K][D], theta[K][D][D];
 
 int main(){
-    for (int k=0;k<K;k++){
+    int k;
+    for (k=0;k<K;k++){
         w[k] = 0;
     }
-    printf("%f\n", w[0]);
+    initParameters();
     generateRandomData();
     serialEM_GMM();
-    getComponent(0);
+    /*
+    for (k=0;k<K;k++){
+        getComponent(k);
+        printf("\n");
+    }
+    */
     return 0;
 }
 
 void generateRandomData(){
     for (int n=0;n<N;n++){
         for (int d=0;d<D;d++){
-            x[n][d] = rand()%30;
+            x[n][d] = ((float)rand()/(float)(RAND_MAX))*20.0;
+        }
+    }
+}
+
+void initParameters(){
+    int k,d;
+    // init w
+    float acc_w_sum = 0;
+    for (k=0;k<K;k++){
+        w[k] = ((float)rand()/(float)(RAND_MAX)) * (1-acc_w_sum);
+        acc_w_sum += w[k];
+    }
+    // init mu, theta
+    for (k=0;k<K;k++){
+        for (d=0;d<D;d++){
+            mu[k][d] = ((float)rand()/(float)(RAND_MAX))*20.0;
+            theta[k][d][d] = ((float)rand()/(float)(RAND_MAX))*20.0;
         }
     }
 }
 
 void serialEM_GMM(){
-    int s,n,k,d;
-    float g[K], r[N][K], Nk[K] = {0}, sigma2[K][D] = {0};
+    int n,k,d;
+    float g[K], r[N][K], Nk[K] = {0}, sigma2[K][D],s;
     bool stopCondition = false;
+    int counter = 0;
     while (!stopCondition){
         // Expectation step (E-step)
         for (n=0;n<N;n++){
             s = 0;
             for (k=0;k<K;k++){
-                theta[0][0][0] = 1;
-                printf("%f\n", theta[0][0][0]);
-                g[k] = w[k]*G(x[n],mu[k], (theta[k]));
+                g[k] = w[k]*G(n,k); // n : vector index ; k : guassian component index
                 s = s + g[k];
             }
             for (k=0;k<K;k++){
@@ -56,6 +79,14 @@ void serialEM_GMM(){
             }
         }
         // Maximization step (M-step)
+        for (k=0;k<K;k++){
+            for (d=0;d<D;d++){
+                sigma2[k][d] = 0.0;
+                mu[k][d] = 0;
+            }
+            w[k] = 0;
+            Nk[k] = 0;
+        }
         for (n=0;n<N;n++){
             for (k=0;k<K;k++)
                 Nk[k] = Nk[k] + r[n][k];
@@ -79,47 +110,62 @@ void serialEM_GMM(){
             for (d=0;d<D;d++)
                 theta[k][d][d] = sigma2[k][d];
         }
-        break;
+        counter ++;
+        getComponent(0);
+        if (counter == 1000)    
+            break;
 
     }
 }
 
-float G(float * x, float * mu, float theta[][D]){
-    printf("%f\n", theta[0][0]);
+float G(int n, int k){
     float x_mu[D];
     float thetaInverse[D][D] = {0};
     float matrixMult = 0;
     float expEval;
     for (int d=0;d<D;d++){
-        x_mu[d] = x[d] - mu[d];
+        x_mu[d] = x[n][d] - mu[k][d];
     }
-    diagMatrixInverse(theta, thetaInverse);
+    diagMatrixInverse(k, thetaInverse);
     matrixMult = diagMatrixBy2VectorsMultiply(thetaInverse, x_mu, x_mu);
     expEval = (float)exp(-0.5*matrixMult);
-    return expEval/sqrt(pow(2*M_PI, D)*det(theta));
+    return expEval/sqrt(pow(2*M_PI, D)*det(k));
 }
 
-void diagMatrixInverse(float matrix[][D], float matrixInversed[][D]){
+void diagMatrixInverse(int k, float matrixInversed[][D]){
     for (int d=0;d<D;d++){
-        matrixInversed[d][d] = 1/matrix[d][d];
+        matrixInversed[d][d] = 1/theta[k][d][d];
     }
 }
 
 float diagMatrixBy2VectorsMultiply(float matrix[][D], float * vector1, float * vector2){
     float result = 0;
     for (int d=0;d<D;d++){
-            result = matrix[d][d]*vector1[d]*vector2[d];
+            result += matrix[d][d]*vector1[d]*vector2[d];
     }
     return result;
 }
 
-float det(float matrix[][D]){
+float det(int k){
     float result = 1;
     for (int d=0;d<D;d++){
-        result *= matrix[d][d];
+        result *= theta[k][d][d];
     }
     return result;
 }
 void getComponent(int k){
+    int d;
     printf("w[%d] = %f\n",k, w[k]);
+    
+    printf("mu[%d] = [", k);
+    for (d=0;d<D;d++){
+            printf("%f, ", mu[k][d]);
+    }
+    printf("]\n");
+    printf("theta[%d] = [", k);
+    for (d=0;d<D;d++){
+            printf("%f, ", theta[k][d][d]);
+    }
+    printf("]\n");
+    
 }
