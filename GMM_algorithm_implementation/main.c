@@ -1,11 +1,14 @@
+
 #include <stdio.h>
-#define _USE_MATH_DEFINES
+#include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 
+# define M_PI		3.14159265358979323846	/* pi */
 
-#define K   6
-#define D   1
-#define N   50
+#define K   3
+#define D   2
+#define N   10
 
 //global vectors
 double w[K];
@@ -16,18 +19,29 @@ double x[N][D];
 //intermediate vectors
 double R[N][K];
 
+double drand ( double low, double high )
+{
+    return ( (double)rand() * ( high - low ) ) / (double)RAND_MAX + low;
+}
+
+void testDrand(){
+    for (int i=0;i<100;i++){
+        printf("%lf\n", drand(5.0,25.0));
+    }
+}
+
 void initParams(){
-    mu[0][0] = 15.0;
-    theta[0][0][0] = 5.0;
-    w[0] = 1.0/K;
-    for (int k=1;k<K;k++){
-        mu[k-1][0] = mu[k][0]+3.0;
-        theta[k][0][0] = theta[k-1][0][0]+2.0;
+    for (int k=0;k<K;k++){
+        for (int d=0;d<D;d++){
+            mu[k][d] = (double)drand(0.1, 0.5);
+            theta[k][d][d] = (double)drand(0.1, 0.3);
+        }
+        
         w[k] = 1.0/K;
     }
-    x[0][0] = 0.0;
-    for (int n=1;n<N;n++){
-        x[n][0] = x[n-1][0]+1.0;
+    for (int n=0;n<N;n++){
+        for (int d=0;d<D;d++)
+            x[n][d] = (double)drand(0.1, 6.0);
         //printf("%lf\n", x[n][0]);
     }
 }
@@ -35,15 +49,19 @@ double G(int n, int k){
     double result;
     double thetaInv[D];
     double xn_k[D];
-    double exponent = 0;
-    double detTheta = 1;
+    double exponent = 0.0;
+    double detTheta = 1.0;
     for (int d=0;d<D;d++){
         thetaInv[d] = 1/theta[k][d][d];
         xn_k[d] = x[n][d] - mu[k][d];
         exponent += xn_k[d]*xn_k[d]*thetaInv[d];
         detTheta *= theta[k][d][d];
+        //printf("%lf %lf %lf %lf %lf | ", theta[k][d][d], thetaInv[d], xn_k[d], exponent, detTheta);
+        //printf("%lf | ", detTheta);
     }
-    result = exp(-0.5*exponent)/(sqrt(2*M_PI*detTheta));
+   // printf("%lf %lf |", sqrt(2*M_PI*fabs(detTheta)), fabs(detTheta));
+    result = exp((-0.5*exponent)/(sqrt(2*M_PI*detTheta)));
+    //printf("%lf ", result);
     return result;
 }
 
@@ -51,8 +69,8 @@ double r(int n, int k){
     double result = 0.0;
     for (int kt=0;kt<K;kt++)
         result += w[kt]*G(n, kt);
-    //printf("%lf\n", result);
     result = w[k]*G(n,k)/result;
+    //printf("r[%d][%d] = %lf\n", n, k, result);
     return result;
 }
 
@@ -60,7 +78,7 @@ void calcR(){
     for (int n=0;n<N;n++){
         for (int k=0;k<K;k++){
             R[n][k] = r(n,k);
-            //printf("%lf ", R[n][k]);
+            //printf("r[%d][%d] = %lf | ",n,k,R[n][k]);
         }
         //printf(",\n");
     }
@@ -76,6 +94,7 @@ double calcM(int k){
 void calcParams(){
     for (int k=0;k<K;k++){
         double m = calcM(k);
+       // printf("m[%d] = %lf\n", k,m);
         w[k] = m/N;
         for (int d=0;d<D;d++){
             mu[k][d] = 0.0;
@@ -114,19 +133,54 @@ void printParams(){
         //printf("\n");
     }
 }
+
+double calcL(){
+    double L = 0.0;
+    for (int n=0;n<N;n++){
+        double subSum = 0.0;
+        for (int k=0;k<K;k++){
+            subSum += G(n,k)*w[k];
+            //printf("%lf %lf %lf | ", subSum, w[k], G(n,k));
+        }
+        L += log(subSum);
+    }
+    return L;
+}
 void main(){
     initParams();
-    double g;
-    FILE * gnuplot = fopen("gnuplot.txt", "w");
-    for (int n = 0; n < N; n++){
-       // g = G(n, 0);
-        fprintf(gnuplot, "%g %lf\n", x[n][0], g);
-       // printf("%lf", g);
-    }
-    for (int i=0;i<100;i++){
+    //testDrand();
+    //double g = G(0,0); 
+   // printf("%lf\n", g);
+    bool isConverges = false;
+    double L, prevL;
+    prevL = calcL();
+    int i = 0;
+    printParams();
+    while (!isConverges){
         calcR();
         calcParams();
         printParams();
+        L = calcL();
+        if ((double)-0.000001<L-prevL && L-prevL<(double)0.000001)
+            isConverges = true;
+        prevL = L;
+        printf("%lf\n", L);
+      //  if (isnan(L))
+        //    break;
+        i++;
+        //break;
+        
     }
-    
+    FILE * gnuplot = fopen("gmm.csv", "w");
+    fprintf(gnuplot, "x,y\n");
+    for (int n = 0; n < N; n++){
+       for (int d=0;d<D;d++){
+           fprintf(gnuplot, "%lf", x[n][d]);
+            if (d != D-1)
+                fprintf(gnuplot, ",");
+       }    
+        fprintf(gnuplot, "\n");
+       // printf("%lf", g);
+    }
+    fclose(gnuplot);
 }
