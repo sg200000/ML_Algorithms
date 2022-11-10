@@ -6,9 +6,9 @@
 
 # define M_PI		3.14159265358979323846	/* pi */
 
-#define K   3
-#define D   2
-#define N   10
+#define K   5
+#define D   3
+#define N   50
 
 //global vectors
 double w[K];
@@ -33,15 +33,15 @@ void testDrand(){
 void initParams(){
     for (int k=0;k<K;k++){
         for (int d=0;d<D;d++){
-            mu[k][d] = (double)drand(0.1, 0.5);
-            theta[k][d][d] = (double)drand(0.1, 0.3);
+            mu[k][d] = (double)drand(0.1, 5.0);
+            theta[k][d][d] = (double)drand(0.1, 2.0);
         }
         
         w[k] = 1.0/K;
     }
     for (int n=0;n<N;n++){
         for (int d=0;d<D;d++)
-            x[n][d] = (double)drand(0.1, 6.0);
+            x[n][d] = (double)drand(0.1, 0.4);
         //printf("%lf\n", x[n][0]);
     }
 }
@@ -120,7 +120,7 @@ void printParams(){
     for (int k=0;k<1;k++){
         //printf("mu[%d] = ", k);
         for (int d=0;d<D;d++){
-        //    printf("%lf ", mu[k][d]);
+            printf("mu[%d][%d] = %lf ",k, d, mu[k][d]);
         }
         //printf("\n");
     }
@@ -146,6 +146,38 @@ double calcL(){
     }
     return L;
 }
+
+void storePoints(){
+    FILE * points = fopen("points.csv", "w");
+    fprintf(points, "x,y\n");
+    for (int n = 0; n < N; n++){
+       for (int d=0;d<D;d++){
+           fprintf(points, "%lf", x[n][d]);
+            if (d != D-1)
+                fprintf(points, ",");
+       }    
+        fprintf(points, "\n");
+       // printf("%lf", g);
+    }
+    fclose(points);
+}
+
+void storeParams(){
+    // w[k], mu[k], sigma2[k]
+    FILE * gnuplot = fopen("model.csv", "w");
+    fprintf(gnuplot, "%d %d\n", K, D);
+    for (int k=0;k<K;k++){
+        fprintf(gnuplot, "%lf ");
+        for (int d=0;d<D;d++){
+           fprintf(gnuplot, "%lf ", mu[k][d]);
+        } 
+        for (int d=0;d<D;d++){
+           fprintf(gnuplot, "%lf ", theta[k][d][k]);
+        } 
+        fprintf(gnuplot, "\n");
+    }
+    fclose(gnuplot);
+}
 void main(){
     initParams();
     //testDrand();
@@ -169,18 +201,7 @@ void main(){
         //    break;
         i++;
         //break;
-        
     }
-    FILE * gnuplot = fopen("gmm.csv", "w");
-    fprintf(gnuplot, "x,y\n");
-    for (int n = 0; n < N; n++){
-       for (int d=0;d<D;d++){
-           fprintf(gnuplot, "%lf", x[n][d]);
-            if (d != D-1)
-                fprintf(gnuplot, ",");
-       }    
-        fprintf(gnuplot, "\n");
-       // printf("%lf", g);
-    }
-    fclose(gnuplot);
+    storePoints();
+    storeParams();
 }
