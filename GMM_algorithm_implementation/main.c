@@ -155,7 +155,7 @@ double calcL(){
 
 /// @brief Store points in a file (points.csv)
 void storePoints(){
-    FILE * points = fopen("points.csv", "w");
+    FILE * points = fopen("points.txt", "w");
     fprintf(points, "x,y\n");
     for (int n = 0; n < N; n++){
        for (int d=0;d<D;d++){
@@ -171,7 +171,7 @@ void storePoints(){
 /// @brief Store model parameters in  a file
 void storeParams(){
     // w[k], mu[k], sigma2[k]
-    FILE * gnuplot = fopen("model.csv", "w");
+    FILE * gnuplot = fopen("model.txt", "w");
     fprintf(gnuplot, "%d %d\n", K, D);
     for (int k=0;k<K;k++){
         fprintf(gnuplot, "%lf ");
