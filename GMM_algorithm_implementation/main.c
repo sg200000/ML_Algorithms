@@ -7,7 +7,7 @@
 
 #define K   5   /* The number of clusters */
 #define D   3   /* The dimension of data */
-#define N   50  /* The number of test vector generated */
+#define N   50  /* The number of test vectors generated */
 
 //global vectors
 double w[K];    /* The mixture weights of the K clusters */
