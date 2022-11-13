@@ -1,3 +1,16 @@
+/**
+ * File owner : Said Guouihaj
+ * Description : 
+ * * This is my C implementation of EM-GMM algorithm
+ * * The program generate random test data return The following parameters :
+ * * * Mixture coefficent : a list of K scalars
+ * * * Means vectors : a list of dimension D vectors
+ * * * Covariance matrices : a list K of diagonal matrices represented with their diagonal vectors of dimension D
+ * * The output reprented as a standard output and stored to a file model.txt
+ * * The data generated stored in points.csv
+ * * This is a sequencial program
+**/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -12,7 +25,7 @@
 //global vectors
 double w[K];    /* The mixture weights of the K clusters */
 double mu[K][D];    /* The mean vectors of the K cluster with D dimension*/
-double theta[K][D]; /* the diagonal of Covariance matrices */
+double theta[K][D]; /* The diagonal of Covariance matrices */
 double x[N][D]; /* Input test vectors */
 
 //intermediate vectors
@@ -32,7 +45,7 @@ void storePoints(void);
 void storeParams(void);
 
 void main(){
-    initParams();
+    initParams();               
     bool isConverges = false;
     double L, prevL;
     prevL = calcL();
@@ -40,7 +53,7 @@ void main(){
         calcR();
         calcParams();
         L = calcL();
-        if ((double)-0.000001<L-prevL && L-prevL<(double)0.000001) /* convergence precision*/
+        if ((double)-0.000001<L-prevL && L-prevL<(double)0.000001) /* convergence precision */
             isConverges = true;
         prevL = L;
     }
