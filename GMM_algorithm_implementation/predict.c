@@ -1,17 +1,36 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
+# define M_PI		3.14159265358979323846	/* pi */
+
+double * w;
+double ** mu;
+double ** theta;
+
+double ** x;
+
+int dim,  numComps;
+
 int main(){
+    /* begin parsing model*/
     FILE * model = fopen("model.csv", "r");
-    int dim,  numComps;
+
+    /* Parse number of components and he dimension*/
     fscanf(model, "%d", &numComps);
     fscanf(model, "%d", &dim);
     printf("%d %d\n", dim, numComps);
-    double w[numComps];
-    double mu[numComps][dim];
-    double theta[numComps][dim];
+
+    /* Allocate memory for data */
+    w = (double *) malloc(numComps*sizeof(double));
+    mu = (double **) malloc(numComps*sizeof(double *));
+    for (int i=0;i<numComps;i++)
+        mu[i] = (double *)malloc(dim*sizeof(double));
+    theta = (double **) malloc(numComps*sizeof(double *));
+    for (int i=0;i<numComps;i++)
+        theta[i] = (double *)malloc(dim*sizeof(double));
+
     double tempBuffer;
-    //fgetc(model);
     for (int k=0;k<numComps;k++){
         fscanf(model,"%lf", &tempBuffer);
         w[k] = tempBuffer;
@@ -19,18 +38,23 @@ int main(){
         printf("w[%d] = %lf\n", k, w[k]);
         for (int d=0;d<dim;d++){
             fscanf(model,"%lf", &tempBuffer);
-            mu[numComps][dim] = tempBuffer;
-            printf("mu[%d][%d] = %lf\n",k,d, mu[numComps][dim]);
+            mu[k][d] = tempBuffer;
+            printf("mu[%d][%d] = %lf\n",k,d, mu[k][d]);
         }
         for (int d=0;d<dim;d++){
             fscanf(model,"%lf", &tempBuffer);
-            theta[numComps][dim] = tempBuffer;
-            printf("theta[%d][%d] = %lf\n",k, d, theta[numComps][dim]);
+            theta[k][d] = tempBuffer;
+            printf("theta[%d][%d] = %lf\n",k, d, theta[k][d]);
         }
     }
-    /*while(fgets(chunk, sizeof(chunk), fp) != NULL) {
-        fputs(chunk, stdout);
-        fputs("|*\n", stdout); 
-16  }*/
+    /* end parsing model */
+    fclose(model);
+    for (int i=0;i<numComps;i++){
+        free(mu[i]);
+        free(theta[i]);
+    }
+    free(w);
+    free(mu);
+    free(theta);
     return 0;
 }

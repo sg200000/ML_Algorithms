@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -6,35 +5,35 @@
 
 # define M_PI		3.14159265358979323846	/* pi */
 
-#define K   5
-#define D   3
-#define N   50
+#define K   5   /* Nombre de clusters*/
+#define D   3   /* La dimension des données*/
+#define N   50  /* Le nombre de vecteurs à générer*/
 
 //global vectors
-double w[K];
-double mu[K][D];
-double theta[K][D][D];
-double x[N][D];
+double w[K];    /* Le vecteurs des coefficients (Mixture coefficients)*/
+double mu[K][D];    /* la liste des vecteurs de moyens statistiques (mean) pour chaque cluster*/
+double theta[K][D]; /* Les matrices de covariance des clusters (considérés diagonales)*/
+double x[N][D]; /* Les vecteurs d'entrées */
 
 //intermediate vectors
-double R[N][K];
+double R[N][K]; /* La liste matrices des valeurs des responsabilités */
 
+
+/// @brief Random double generator 
+/// @param low : Minimum value
+/// @param high : Maximum value
+/// @return 
 double drand ( double low, double high )
 {
     return ( (double)rand() * ( high - low ) ) / (double)RAND_MAX + low;
 }
 
-void testDrand(){
-    for (int i=0;i<100;i++){
-        printf("%lf\n", drand(5.0,25.0));
-    }
-}
-
+/// @brief initalize parameters w, mu, theta
 void initParams(){
     for (int k=0;k<K;k++){
         for (int d=0;d<D;d++){
-            mu[k][d] = (double)drand(0.1, 5.0);
-            theta[k][d][d] = (double)drand(0.1, 2.0);
+            mu[k][d] = (double)drand(0.1,5.0);  /* Mean random range*/
+            theta[k][d] = (double)drand(5.0, 20.0); /* Variance random range*/
         }
         
         w[k] = 1.0/K;
@@ -42,9 +41,12 @@ void initParams(){
     for (int n=0;n<N;n++){
         for (int d=0;d<D;d++)
             x[n][d] = (double)drand(0.1, 0.4);
-        //printf("%lf\n", x[n][0]);
     }
 }
+/// @brief Gaussian distribution formula
+/// @param n : input vector index 
+/// @param k : cluster index
+/// @return Gaussian desity result
 double G(int n, int k){
     double result;
     double thetaInv[D];
@@ -52,37 +54,42 @@ double G(int n, int k){
     double exponent = 0.0;
     double detTheta = 1.0;
     for (int d=0;d<D;d++){
-        thetaInv[d] = 1/theta[k][d][d];
+        thetaInv[d] = 1/theta[k][d];
         xn_k[d] = x[n][d] - mu[k][d];
         exponent += xn_k[d]*xn_k[d]*thetaInv[d];
-        detTheta *= theta[k][d][d];
-        //printf("%lf %lf %lf %lf %lf | ", theta[k][d][d], thetaInv[d], xn_k[d], exponent, detTheta);
-        //printf("%lf | ", detTheta);
+        detTheta *= theta[k][d];
     }
-   // printf("%lf %lf |", sqrt(2*M_PI*fabs(detTheta)), fabs(detTheta));
     result = exp((-0.5*exponent)/(sqrt(2*M_PI*detTheta)));
-    //printf("%lf ", result);
+    //printf("%lf ", );
     return result;
 }
 
+/// @brief : Calculate the responsibility value
+/// @param n : input vector index
+/// @param k : index cluster index
+/// @return : The responsibility value
 double r(int n, int k){
     double result = 0.0;
     for (int kt=0;kt<K;kt++)
         result += w[kt]*G(n, kt);
     result = w[k]*G(n,k)/result;
-    //printf("r[%d][%d] = %lf\n", n, k, result);
     return result;
 }
 
+
+/// @brief : Calculate the responsibilities of all values to all clusters (E-step)
 void calcR(){
     for (int n=0;n<N;n++){
         for (int k=0;k<K;k++){
             R[n][k] = r(n,k);
-            //printf("r[%d][%d] = %lf | ",n,k,R[n][k]);
         }
-        //printf(",\n");
     }
 }
+
+
+/// @brief : Calculate m value (intermdiste value) of the cluster k
+/// @param k : the cluster index
+/// @return : the m value of the cluster k
 double calcM(int k){
     double result = 0.0;
     for (int n=0;n<N;n++){
@@ -91,24 +98,25 @@ double calcM(int k){
     return result;
 }
 
+/// @brief Evaluate new parmeters (M-Step)
 void calcParams(){
     for (int k=0;k<K;k++){
         double m = calcM(k);
-       // printf("m[%d] = %lf\n", k,m);
         w[k] = m/N;
         for (int d=0;d<D;d++){
             mu[k][d] = 0.0;
-            theta[k][d][d] = 0.0;
+            theta[k][d] = 0.0;
             for (int n=0;n<N;n++){
                 mu[k][d] += R[n][k]*x[n][d];
-                theta[k][d][d] += R[n][k]*(x[n][d]-mu[k][d])*(x[n][d]-mu[k][d]);
+                theta[k][d] += R[n][k]*(x[n][d]-mu[k][d])*(x[n][d]-mu[k][d]);
             }
             mu[k][d] /= m;
-            theta[k][d][d] /= m;
+            theta[k][d] /= m;
         }
     }
 }
 
+/// @brief Display parameters
 void printParams(){
     double sum = 0.0;
     for (int k=0;k<K;k++){
@@ -116,37 +124,36 @@ void printParams(){
         sum += w[k];
     }
     printf("\n");
-    //printf("\nsum = %lf\n\n", sum);
     for (int k=0;k<1;k++){
-        //printf("mu[%d] = ", k);
         for (int d=0;d<D;d++){
-            printf("mu[%d][%d] = %lf ",k, d, mu[k][d]);
+            printf("mu[%d][%d] = %lf\n",k, d, mu[k][d]);
         }
-        //printf("\n");
+        printf("\n");
     }
-    //printf("\n");
+    printf("\n");
     for (int k=0;k<1;k++){
-       // printf("theta[%d] = ", k);
         for (int d=0;d<D;d++){
-        //    printf("%lf ", theta[k][d][d]);
+            printf("theta[%d][%d] = %lf\n", k, d, theta[k][d]);
         }
-        //printf("\n");
+        printf("\n");
     }
 }
 
+/// @brief Calculate the log-likelihood (The convergence criteria)
+/// @return the log-likelihood
 double calcL(){
     double L = 0.0;
     for (int n=0;n<N;n++){
         double subSum = 0.0;
         for (int k=0;k<K;k++){
             subSum += G(n,k)*w[k];
-            //printf("%lf %lf %lf | ", subSum, w[k], G(n,k));
         }
         L += log(subSum);
     }
     return L;
 }
 
+/// @brief Store points in a file (points.csv)
 void storePoints(){
     FILE * points = fopen("points.csv", "w");
     fprintf(points, "x,y\n");
@@ -157,11 +164,11 @@ void storePoints(){
                 fprintf(points, ",");
        }    
         fprintf(points, "\n");
-       // printf("%lf", g);
     }
     fclose(points);
 }
 
+/// @brief Store model parameters in  a file
 void storeParams(){
     // w[k], mu[k], sigma2[k]
     FILE * gnuplot = fopen("model.csv", "w");
@@ -172,7 +179,7 @@ void storeParams(){
            fprintf(gnuplot, "%lf ", mu[k][d]);
         } 
         for (int d=0;d<D;d++){
-           fprintf(gnuplot, "%lf ", theta[k][d][k]);
+           fprintf(gnuplot, "%lf ", theta[k][d]);
         } 
         fprintf(gnuplot, "\n");
     }
@@ -180,28 +187,18 @@ void storeParams(){
 }
 void main(){
     initParams();
-    //testDrand();
-    //double g = G(0,0); 
-   // printf("%lf\n", g);
     bool isConverges = false;
     double L, prevL;
     prevL = calcL();
-    int i = 0;
-    printParams();
     while (!isConverges){
         calcR();
         calcParams();
-        printParams();
         L = calcL();
-        if ((double)-0.000001<L-prevL && L-prevL<(double)0.000001)
+        if ((double)-0.000001<L-prevL && L-prevL<(double)0.000001) /* convergence precision*/
             isConverges = true;
         prevL = L;
-        printf("%lf\n", L);
-      //  if (isnan(L))
-        //    break;
-        i++;
-        //break;
     }
+    printParams();
     storePoints();
     storeParams();
 }
