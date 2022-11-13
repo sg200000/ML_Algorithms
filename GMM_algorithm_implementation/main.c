@@ -3,21 +3,51 @@
 #include <stdbool.h>
 #include <math.h>
 
-# define M_PI		3.14159265358979323846	/* pi */
+#define M_PI		3.14159265358979323846	/* pi */
 
-#define K   5   /* Nombre de clusters*/
-#define D   3   /* La dimension des données*/
-#define N   50  /* Le nombre de vecteurs à générer*/
+#define K   5   /* The number of clusters */
+#define D   3   /* The dimension of data */
+#define N   50  /* The number of test vector generated */
 
 //global vectors
-double w[K];    /* Le vecteurs des coefficients (Mixture coefficients)*/
-double mu[K][D];    /* la liste des vecteurs de moyens statistiques (mean) pour chaque cluster*/
-double theta[K][D]; /* Les matrices de covariance des clusters (considérés diagonales)*/
-double x[N][D]; /* Les vecteurs d'entrées */
+double w[K];    /* The mixture weights of the K clusters */
+double mu[K][D];    /* The mean vectors of the K cluster with D dimension*/
+double theta[K][D]; /* the diagonal of Covariance matrices */
+double x[N][D]; /* Input test vectors */
 
 //intermediate vectors
-double R[N][K]; /* La liste matrices des valeurs des responsabilités */
+double R[N][K]; /* The list of responsibility values (Calculated at E-step) */
 
+/* function prototypes */
+double drand ( double low, double high);
+void initParams(void);
+double G(int n, int k);
+double r(int n, int k);
+void calcR(void);
+double calcM(int k);
+void calcParams(void);
+void printParams(void);
+double calcL(void);
+void storePoints(void);
+void storeParams(void);
+
+void main(){
+    initParams();
+    bool isConverges = false;
+    double L, prevL;
+    prevL = calcL();
+    while (!isConverges){
+        calcR();
+        calcParams();
+        L = calcL();
+        if ((double)-0.000001<L-prevL && L-prevL<(double)0.000001) /* convergence precision*/
+            isConverges = true;
+        prevL = L;
+    }
+    printParams();
+    storePoints();
+    storeParams();
+}
 
 /// @brief Random double generator 
 /// @param low : Minimum value
@@ -60,7 +90,6 @@ double G(int n, int k){
         detTheta *= theta[k][d];
     }
     result = exp((-0.5*exponent)/(sqrt(2*M_PI*detTheta)));
-    //printf("%lf ", );
     return result;
 }
 
@@ -184,21 +213,4 @@ void storeParams(){
         fprintf(gnuplot, "\n");
     }
     fclose(gnuplot);
-}
-void main(){
-    initParams();
-    bool isConverges = false;
-    double L, prevL;
-    prevL = calcL();
-    while (!isConverges){
-        calcR();
-        calcParams();
-        L = calcL();
-        if ((double)-0.000001<L-prevL && L-prevL<(double)0.000001) /* convergence precision*/
-            isConverges = true;
-        prevL = L;
-    }
-    printParams();
-    storePoints();
-    storeParams();
 }
